@@ -311,23 +311,23 @@ def run(args, train_dataloader, val_dataloader, METRO_model, smpl, mesh_sampler,
             #     temp_fname = args.output_dir + 'visual_' + stamp + '.jpg'
             #     cv2.imwrite(temp_fname, np.asarray(visual_imgs[:,:,::-1]*255))
 
-        # if iteration % iters_per_epoch == 0:
-        #     val_mPVE, val_mPJPE, val_PAmPJPE, val_count = run_validate(args, val_dataloader, 
-        #                                         METRO_model, 
-        #                                         criterion_keypoints, 
-        #                                         criterion_vertices, 
-        #                                         epoch, 
-        #                                         smpl,
-        #                                         mesh_sampler)
+        if iteration % iters_per_epoch == 0:
+            val_mPVE, val_mPJPE, val_PAmPJPE, val_count = run_validate(args, val_dataloader, 
+                                                METRO_model, 
+                                                criterion_keypoints, 
+                                                criterion_vertices, 
+                                                epoch, 
+                                                smpl,
+                                                mesh_sampler)
 
-        #     logger.info(
-        #         ' '.join(['Validation', 'epoch: {ep}',]).format(ep=epoch) 
-        #         + '  mPVE: {:6.2f}, mPJPE: {:6.2f}, PAmPJPE: {:6.2f}, Data Count: {:6.2f}'.format(1000*val_mPVE, 1000*val_mPJPE, 1000*val_PAmPJPE, val_count)
-        #     )
+            logger.info(
+                ' '.join(['Validation', 'epoch: {ep}',]).format(ep=epoch) 
+                + '  mPVE: {:6.2f}, mPJPE: {:6.2f}, PAmPJPE: {:6.2f}, Data Count: {:6.2f}'.format(1000*val_mPVE, 1000*val_mPJPE, 1000*val_PAmPJPE, val_count)
+            )
 
-        #     if val_PAmPJPE<log_eval_metrics.PAmPJPE:
-        #         checkpoint_dir = save_checkpoint(METRO_model, args, epoch, iteration)
-        #         log_eval_metrics.update(val_mPVE, val_mPJPE, val_PAmPJPE, epoch)
+            if val_PAmPJPE<log_eval_metrics.PAmPJPE:
+                checkpoint_dir = save_checkpoint(METRO_model, args, epoch, iteration)
+                log_eval_metrics.update(val_mPVE, val_mPJPE, val_PAmPJPE, epoch)
                 
         
     total_training_time = time.time() - start_training_time
