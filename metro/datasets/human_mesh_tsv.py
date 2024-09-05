@@ -44,7 +44,7 @@ class MeshTSVDataset(object):
         self.scale_factor = 0.25 # rescale bounding boxes by a factor of [1-options.scale_factor,1+options.scale_factor]
         self.noise_factor = 0.4
         self.rot_factor = 30 # Random rotation in the range [-rot_factor, rot_factor]
-        self.img_res = 224
+        self.img_res = 256
 
         self.image_keys = self.prepare_image_keys()
 

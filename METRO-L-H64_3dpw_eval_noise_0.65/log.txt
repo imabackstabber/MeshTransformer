@@ -1,0 +1,19 @@
+2024-05-12 15:56:32,923 METRO INFO: Using 2 GPUs
+2024-05-12 15:56:37,412 METRO INFO: Update config parameter num_hidden_layers: 12 -> 4
+2024-05-12 15:56:37,412 METRO INFO: Update config parameter hidden_size: 768 -> 1024
+2024-05-12 15:56:37,412 METRO INFO: Update config parameter num_attention_heads: 12 -> 4
+2024-05-12 15:56:38,507 METRO INFO: Init model from scratch.
+2024-05-12 15:56:38,508 METRO INFO: Update config parameter num_hidden_layers: 12 -> 4
+2024-05-12 15:56:38,508 METRO INFO: Update config parameter hidden_size: 768 -> 256
+2024-05-12 15:56:38,508 METRO INFO: Update config parameter num_attention_heads: 12 -> 4
+2024-05-12 15:56:38,738 METRO INFO: Init model from scratch.
+2024-05-12 15:56:38,739 METRO INFO: Update config parameter num_hidden_layers: 12 -> 4
+2024-05-12 15:56:38,739 METRO INFO: Update config parameter hidden_size: 768 -> 128
+2024-05-12 15:56:38,739 METRO INFO: Update config parameter num_attention_heads: 12 -> 4
+2024-05-12 15:56:38,855 METRO INFO: Init model from scratch.
+2024-05-12 15:56:40,628 METRO INFO: => loading hrnet-v2-w64 model
+2024-05-12 15:56:40,629 METRO INFO: Transformers total parameters: 102256646
+2024-05-12 15:56:40,632 METRO INFO: Backbone total parameters: 128059944
+2024-05-12 15:56:40,684 METRO INFO: Loading state dict from checkpoint ./models/metro_release/metro_3dpw_state_dict.bin
+2024-05-12 15:56:41,502 METRO INFO: Training parameters Namespace(data_dir='datasets', train_yaml='imagenet2012/train.yaml', val_yaml='3dpw/test_has_gender.yaml', num_workers=2, img_scale_factor=1, noise_scale_factor=0.65, model_name_or_path='metro/modeling/bert/bert-base-uncased/', resume_checkpoint='./models/metro_release/metro_3dpw_state_dict.bin', output_dir='METRO-L-H64_3dpw_eval_noise_0.65/', config_name='', per_gpu_train_batch_size=30, per_gpu_eval_batch_size=30, lr=0.0001, num_train_epochs=200, vertices_loss_weight=100.0, joints_loss_weight=1000.0, vloss_w_full=0.33, vloss_w_sub=0.33, vloss_w_sub2=0.33, drop_out=0.1, arch='hrnet-w64', num_hidden_layers=4, hidden_size=128, num_attention_heads=4, intermediate_size=-1, input_feat_dim='2051,512,128', hidden_feat_dim='1024,256,128', legacy_setting=True, run_eval_only=True, logging_steps=1000, device=device(type='cuda', index=0), seed=88, local_rank=0, num_gpus=2, distributed=True)
+2024-05-12 16:01:59,499 METRO INFO: Validation epoch: 0  mPVE: 237.28, mPJPE: 208.21, PAmPJPE: 117.58 

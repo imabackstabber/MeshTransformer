@@ -1,0 +1,13 @@
+torchrun --standalone --nnodes=1 --nproc-per-node=4  metro/tools/run_metro_bodymesh.py \
+       --train_yaml Cliff-H36m/train.yaml \
+       --val_yaml 3dpw/test_has_gender.yaml \
+       --arch resnet50 \
+       --num_workers 1 \
+       --per_gpu_train_batch_size 16 \
+       --per_gpu_eval_batch_size 16 \
+       --num_hidden_layers 4 \
+       --num_attention_heads 4 \
+       --lr 1e-4 \
+       --num_train_epochs 50 \
+       --input_feat_dim 2051,512,128 \
+       --hidden_feat_dim 1024,256,128 

@@ -13,6 +13,7 @@ from torch import nn
 from .modeling_bert import BertPreTrainedModel, BertEmbeddings, BertEncoder, BertPooler
 from .modeling_bert import BertLayerNorm as LayerNormClass
 import metro.modeling.data.config as cfg
+from metro.modeling.model.modules import FCBlock, make_conv_layers, MixerLayer
 
 class METRO_Encoder(BertPreTrainedModel):
     def __init__(self, config):
@@ -29,7 +30,8 @@ class METRO_Encoder(BertPreTrainedModel):
         except:
             self.use_img_layernorm = None
 
-        self.img_embedding = nn.Linear(self.img_dim, self.config.hidden_size, bias=True)
+        self.img_embedding = nn.Linear(self.img_dim, self.config.hidden_size, bias=True) # image
+        self.pct_embedding = nn.Linear(self.img_dim, self.config.hidden_size, bias=True) # pct
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         if self.use_img_layernorm:
             self.LayerNorm = LayerNormClass(config.hidden_size, eps=config.img_layer_norm_eps)
@@ -45,11 +47,13 @@ class METRO_Encoder(BertPreTrainedModel):
         for layer, heads in heads_to_prune.items():
             self.encoder.layer[layer].attention.prune_heads(heads)
 
-    def forward(self, img_feats, input_ids=None, token_type_ids=None, attention_mask=None,
+    def forward(self, img_feats, pct_feats, input_ids=None, token_type_ids=None, attention_mask=None,
             position_ids=None, head_mask=None):
 
         batch_size = len(img_feats)
-        seq_length = len(img_feats[0])
+        img_seq_length = len(img_feats[0])
+        pct_seq_length = len(pct_feats[0])
+        seq_length = img_seq_length + pct_seq_length
         input_ids = torch.zeros([batch_size, seq_length],dtype=torch.long).cuda()
 
         if position_ids is None:
@@ -86,9 +90,13 @@ class METRO_Encoder(BertPreTrainedModel):
 
         # Project input token features to have spcified hidden size
         img_embedding_output = self.img_embedding(img_feats)
+        # project pct token
+        pct_embedding_output = self.pct_embedding(pct_feats)
+        # concat
+        img_pose_embedding_output = torch.cat([img_embedding_output, pct_embedding_output], dim = 1) # b, img_seq_len + pct_seq_len, hidden
 
         # We empirically observe that adding an additional learnable position embedding leads to more stable training
-        embeddings = position_embeddings + img_embedding_output
+        embeddings = position_embeddings + img_pose_embedding_output
 
         if self.use_img_layernorm:
             embeddings = self.LayerNorm(embeddings)
@@ -118,9 +126,12 @@ class METRO(BertPreTrainedModel):
         self.bert = METRO_Encoder(config)
         self.cls_head = nn.Linear(config.hidden_size, self.config.output_feature_dim)
         self.residual = nn.Linear(config.img_feature_dim, self.config.output_feature_dim)
+        # pct
+        # self.pct_cls_head = nn.Linear(config.hidden_size, self.config.output_feature_dim)
+        self.pct_residual = nn.Linear(config.img_feature_dim, self.config.output_feature_dim)
         self.apply(self.init_weights)
 
-    def forward(self, img_feats, input_ids=None, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
+    def forward(self, img_feats, pct_feats, input_ids=None, token_type_ids=None, attention_mask=None, masked_lm_labels=None,
             next_sentence_label=None, position_ids=None, head_mask=None):
         '''
         # self.bert has three outputs
@@ -128,18 +139,23 @@ class METRO(BertPreTrainedModel):
         # predictions[1]: all_hidden_states, if enable "self.config.output_hidden_states"
         # predictions[2]: attentions, if enable "self.config.output_attentions"
         '''
-        predictions = self.bert(img_feats=img_feats, input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
+        img_feat_len = len(img_feats[0])
+        predictions = self.bert(img_feats=img_feats, pct_feats = pct_feats, input_ids=input_ids, position_ids=position_ids, token_type_ids=token_type_ids,
                             attention_mask=attention_mask, head_mask=head_mask)
 
         # We use "self.cls_head" to perform dimensionality reduction. We don't use it for classification.
         pred_score = self.cls_head(predictions[0])
         res_img_feats = self.residual(img_feats)
-        pred_score = pred_score + res_img_feats
+        res_pct_feats = self.pct_residual(pct_feats)
+        res_feats = torch.cat([res_img_feats, res_pct_feats], dim = 1) # concat feats
+        pred_score = pred_score + res_feats
+
+        img_score, pct_score = pred_score[:,:img_feat_len], pred_score[:,img_feat_len:]
 
         if self.config.output_attentions and self.config.output_hidden_states:
-            return pred_score, predictions[1], predictions[-1]
+            return img_score, pct_score, predictions[1], predictions[-1]
         else:
-            return pred_score
+            return img_score, pct_score
 
 class METRO_Hand_Network(torch.nn.Module):
     '''
@@ -222,15 +238,32 @@ class METRO_Body_Network(torch.nn.Module):
     '''
     End-to-end METRO network for human pose and mesh reconstruction from a single image.
     '''
-    def __init__(self, args, config, backbone, trans_encoder, mesh_sampler):
+    def __init__(self, args, config, backbone, trans_encoder, mesh_sampler, pct):
         super(METRO_Body_Network, self).__init__()
         self.config = config
         self.config.device = args.device
         self.backbone = backbone
         self.trans_encoder = trans_encoder
+        self.pct = pct # bind pct
+        self.token_mixer = FCBlock(args.tokenizer_codebook_token_dim + 1, 2051) # align with metro
+        rebuttal = {}
+        rebuttal['enc_hidden_dim'] = 512
+        rebuttal['enc_hidden_inter_dim'] = 512
+        rebuttal['token_inter_dim'] = 64
+        rebuttal['enc_dropout'] = 0.0
+        rebuttal['enc_num_blocks'] = 4
+        rebuttal['num_joints'] = 34
+        rebuttal['token_num'] = 34
+        self.start_embed = nn.Linear(512, rebuttal['enc_hidden_dim'])
+        self.encoder = nn.ModuleList(
+        [MixerLayer(rebuttal['enc_hidden_dim'], rebuttal['enc_hidden_inter_dim'], 
+            rebuttal['num_joints'], rebuttal['token_inter_dim'],
+            rebuttal['enc_dropout']) for _ in range(rebuttal['enc_num_blocks'])])
+        self.encoder_layer_norm = nn.LayerNorm(rebuttal['enc_hidden_dim'])
+        self.token_mlp = nn.Linear(rebuttal['num_joints'], rebuttal['token_num'])
         self.upsampling = torch.nn.Linear(431, 1723)
         self.upsampling2 = torch.nn.Linear(1723, 6890)
-        self.conv_learn_tokens = torch.nn.Conv1d(49,431+14,1)
+        self.conv_learn_tokens = torch.nn.Conv1d(64,431+14,1)
         self.cam_param_fc = torch.nn.Linear(3, 1)
         self.cam_param_fc2 = torch.nn.Linear(431, 250)
         self.cam_param_fc3 = torch.nn.Linear(250, 3)
@@ -272,6 +305,28 @@ class METRO_Body_Network(torch.nn.Module):
         # concatinate image feat and template mesh
         features = torch.cat([ref_vertices, img_tokens], dim=2)
 
+        # extract pct_token
+        pct_out = self.pct(images, None, train=False)
+        pct_pose = pct_out['part_token_feat'].clone()
+
+        # ABLATION: use a encoder to directly encode 2d pose feature, we just use pct tokenizer encoder
+        # ABLATION begins
+        encode_feat = self.start_embed(pct_pose) # 2, 17, 512
+        for num_layer in self.encoder:
+            encode_feat = num_layer(encode_feat)
+        encode_feat = self.encoder_layer_norm(encode_feat)
+        encode_feat = encode_feat.transpose(2, 1)
+        encode_feat = self.token_mlp(encode_feat).transpose(2, 1)
+        # pct_token_out = encode_feat.permute(1,0,2) b first
+        pct_token_out = encode_feat
+
+        pct_score = pct_out['encoding_scores']
+        # pct_score = pct_score.permute(1,0,2) b first
+        pct_token = torch.cat([pct_token_out, pct_score], dim = -1)
+
+        # ABLATION ends
+        pct_token = self.token_mixer(pct_token) # [b, 34, 2048]
+
         if is_train==True:
             # apply mask vertex/joint modeling
             # meta_masks is a tensor of all the masks, randomly generated in dataloader
@@ -280,10 +335,12 @@ class METRO_Body_Network(torch.nn.Module):
             features = features*meta_masks + constant_tensor*(1-meta_masks)            
 
         # forward pass
-        if self.config.output_attentions==True:
-            features, hidden_states, att = self.trans_encoder(features)
-        else:
-            features = self.trans_encoder(features)
+        # pass pct token into trans_encoder
+        for tr_enc in self.trans_encoder:
+            if self.config.output_attentions==True:
+                features, pct_token, hidden_states, att = tr_enc(features, pct_token)
+            else:
+                features, pct_token = tr_enc(features, pct_token)
 
         pred_3d_joints = features[:,:num_joints,:]
         pred_vertices_sub2 = features[:,num_joints:,:]

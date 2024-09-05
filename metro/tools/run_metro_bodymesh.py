@@ -32,9 +32,12 @@ from metro.utils.logger import setup_logger
 from metro.utils.comm import synchronize, is_main_process, get_rank, get_world_size, all_gather
 from metro.utils.miscellaneous import mkdir, set_seed
 from metro.utils.metric_logger import AverageMeter, EvalMetricsLogger
-from metro.utils.renderer import Renderer, visualize_reconstruction, visualize_reconstruction_test
+# from metro.utils.renderer import Renderer, visualize_reconstruction, visualize_reconstruction_test
 from metro.utils.metric_pampjpe import reconstruction_error
 from metro.utils.geometric_layers import orthographic_projection
+
+from metro.modeling.model import PCT, SwinV2TransformerRPE2FC, get_pose_net
+from metro.modeling.model import config as resnet_config
 
 def save_checkpoint(model, args, epoch, iteration, num_trial=10):
     checkpoint_dir = op.join(args.output_dir, 'checkpoint-{}-{}'.format(
@@ -278,7 +281,9 @@ def run(args, train_dataloader, val_dataloader, METRO_model, smpl, mesh_sampler,
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if iteration % args.logging_steps == 0 or iteration == max_iter:
+        torch.cuda.empty_cache()
+
+        if iteration == 10 or iteration % args.logging_steps == 0 or iteration == max_iter:
             eta_seconds = batch_time.avg * (max_iter - iteration)
             eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
             logger.info(
@@ -291,38 +296,38 @@ def run(args, train_dataloader, val_dataloader, METRO_model, smpl, mesh_sampler,
                     optimizer.param_groups[0]['lr'])
             )
 
-            visual_imgs = visualize_mesh(   renderer,
-                                            annotations['ori_img'].detach(),
-                                            annotations['joints_2d'].detach(),
-                                            pred_vertices.detach(), 
-                                            pred_camera.detach(),
-                                            pred_2d_joints_from_smpl.detach())
-            visual_imgs = visual_imgs.transpose(0,1)
-            visual_imgs = visual_imgs.transpose(1,2)
-            visual_imgs = np.asarray(visual_imgs)
+            # visual_imgs = visualize_mesh(   renderer,
+            #                                 annotations['ori_img'].detach(),
+            #                                 annotations['joints_2d'].detach(),
+            #                                 pred_vertices.detach(), 
+            #                                 pred_camera.detach(),
+            #                                 pred_2d_joints_from_smpl.detach())
+            # visual_imgs = visual_imgs.transpose(0,1)
+            # visual_imgs = visual_imgs.transpose(1,2)
+            # visual_imgs = np.asarray(visual_imgs)
 
-            if is_main_process()==True:
-                stamp = str(epoch) + '_' + str(iteration)
-                temp_fname = args.output_dir + 'visual_' + stamp + '.jpg'
-                cv2.imwrite(temp_fname, np.asarray(visual_imgs[:,:,::-1]*255))
+            # if is_main_process()==True:
+            #     stamp = str(epoch) + '_' + str(iteration)
+            #     temp_fname = args.output_dir + 'visual_' + stamp + '.jpg'
+            #     cv2.imwrite(temp_fname, np.asarray(visual_imgs[:,:,::-1]*255))
 
-        if iteration % iters_per_epoch == 0:
-            val_mPVE, val_mPJPE, val_PAmPJPE, val_count = run_validate(args, val_dataloader, 
-                                                METRO_model, 
-                                                criterion_keypoints, 
-                                                criterion_vertices, 
-                                                epoch, 
-                                                smpl,
-                                                mesh_sampler)
+        # if iteration % iters_per_epoch == 0:
+        #     val_mPVE, val_mPJPE, val_PAmPJPE, val_count = run_validate(args, val_dataloader, 
+        #                                         METRO_model, 
+        #                                         criterion_keypoints, 
+        #                                         criterion_vertices, 
+        #                                         epoch, 
+        #                                         smpl,
+        #                                         mesh_sampler)
 
-            logger.info(
-                ' '.join(['Validation', 'epoch: {ep}',]).format(ep=epoch) 
-                + '  mPVE: {:6.2f}, mPJPE: {:6.2f}, PAmPJPE: {:6.2f}, Data Count: {:6.2f}'.format(1000*val_mPVE, 1000*val_mPJPE, 1000*val_PAmPJPE, val_count)
-            )
+        #     logger.info(
+        #         ' '.join(['Validation', 'epoch: {ep}',]).format(ep=epoch) 
+        #         + '  mPVE: {:6.2f}, mPJPE: {:6.2f}, PAmPJPE: {:6.2f}, Data Count: {:6.2f}'.format(1000*val_mPVE, 1000*val_mPJPE, 1000*val_PAmPJPE, val_count)
+        #     )
 
-            if val_PAmPJPE<log_eval_metrics.PAmPJPE:
-                checkpoint_dir = save_checkpoint(METRO_model, args, epoch, iteration)
-                log_eval_metrics.update(val_mPVE, val_mPJPE, val_PAmPJPE, epoch)
+        #     if val_PAmPJPE<log_eval_metrics.PAmPJPE:
+        #         checkpoint_dir = save_checkpoint(METRO_model, args, epoch, iteration)
+        #         log_eval_metrics.update(val_mPVE, val_mPJPE, val_PAmPJPE, epoch)
                 
         
     total_training_time = time.time() - start_training_time
@@ -375,9 +380,11 @@ def run_validate(args, val_loader, METRO_model, criterion, criterion_vertices, e
     # switch to evaluate mode
     METRO_model.eval()
     smpl.eval()
+    from tqdm import tqdm
+    begin = time.time()
     with torch.no_grad():
         # end = time.time()
-        for i, (img_keys, images, annotations) in enumerate(val_loader):
+        for i, (img_keys, images, annotations) in tqdm(enumerate(val_loader)):
             batch_size = images.size(0)
             # compute output
             images = images.cuda(args.device)
@@ -405,7 +412,7 @@ def run_validate(args, val_loader, METRO_model, criterion, criterion_vertices, e
             # forward-pass
             pred_camera, pred_3d_joints, pred_vertices_sub2, pred_vertices_sub, pred_vertices = METRO_model(images, smpl, mesh_sampler)
 
-            # obtain 3d joints from full mesh
+            # # obtain 3d joints from full mesh
             pred_3d_joints_from_smpl = smpl.get_h36m_joints(pred_vertices)
 
             pred_3d_pelvis = pred_3d_joints_from_smpl[:,cfg.H36M_J17_NAME.index('Pelvis'),:]
@@ -424,6 +431,8 @@ def run_validate(args, val_loader, METRO_model, criterion, criterion_vertices, e
                 mPJPE.update(np.mean(error_joints), int(torch.sum(has_3d_joints)) )
             if len(error_joints_pa)>0:
                 PAmPJPE.update(np.mean(error_joints_pa), int(torch.sum(has_3d_joints)) )
+
+    print('time:', time.time() - begin)
 
     val_mPVE = all_gather(float(mPVE.avg))
     val_mPVE = sum(val_mPVE)/len(val_mPVE)
@@ -510,7 +519,7 @@ def parse_args():
     parser.add_argument("--num_workers", default=4, type=int, 
                         help="Workers in dataloader.")
     parser.add_argument("--img_scale_factor", default=1, type=int, 
-                        help="adjust image resolution.") 
+                        help="adjust image resolution.")
     #########################################################
     # Loading/saving checkpoints
     #########################################################
@@ -559,6 +568,47 @@ def parse_args():
     parser.add_argument("--hidden_feat_dim", default='1024,256,128', type=str, 
                         help="The Image Feature Dimension.")   
     parser.add_argument("--legacy_setting", default=True, action='store_true',)
+
+    # PCT
+    # Model
+    parser.add_argument('--pct_backbone', default='swin-l',
+                        help='CNN backbone architecture: hrnet-w64, resnet50')
+    parser.add_argument('--pct_backbone_channel', default=1536,
+                        help='CNN backbone architecture: hrnet-w64, resnet50')
+    parser.add_argument("--tokenizer_guide_ratio", default=0.5,type=float)
+    parser.add_argument("--cls_head_conv_channels", default=256,type=int)
+    parser.add_argument("--cls_head_hidden_dim", default=64,type=int)
+    parser.add_argument("--cls_head_num_blocks", default=4, type=int)
+    parser.add_argument("--cls_head_hidden_inter_dim", default=256,type=float)
+    
+    parser.add_argument("--cls_head_token_inter_dim", default=64,type=float)
+    parser.add_argument("--cls_head_dropout", default=0.0,type=float)
+
+    parser.add_argument("--cls_head_conv_num_blocks", default=2, type=int)
+    parser.add_argument("--cls_head_dilation", default=1, type=int)
+
+    # tokenzier
+    parser.add_argument("--tokenizer_encoder_drop_rate", default=0.2, type=float)
+    parser.add_argument("--tokenizer_encoder_num_blocks", default=4, type=int)
+    parser.add_argument("--tokenizer_encoder_hidden_dim", default=512, type=int)
+    parser.add_argument("--tokenizer_encoder_token_inter_dim", default=64, type=int)
+    parser.add_argument("--tokenizer_encoder_hidden_inter_dim", default=512, type=int)
+    parser.add_argument("--tokenizer_encoder_dropout", default=0.0, type=float)
+
+    parser.add_argument("--tokenizer_decoder_num_blocks", default=1, type=int)
+    parser.add_argument("--tokenizer_decoder_hidden_dim", default=32, type=int)
+    parser.add_argument("--tokenizer_decoder_token_inter_dim", default=64, type=int)
+    parser.add_argument("--tokenizer_decoder_hidden_inter_dim", default=64, type=int)
+    parser.add_argument("--tokenizer_decoder_dropout", default=0.0, type=float)
+
+    parser.add_argument("--tokenizer_codebook_token_num", default=34, type=int) # 14 * 2
+    parser.add_argument("--tokenizer_codebook_token_dim", default=512, type=int) 
+    parser.add_argument("--tokenizer_codebook_token_class_num", default=2048, type=int)
+    parser.add_argument("--tokenizer_codebook_ema_decay", default=0.9, type=float)
+    
+    parser.add_argument("--pct_pretrained", default='models/pct/pct_swin_large.pth', type=str)
+    parser.add_argument("--use_pct", default=False, action='store_true')
+    parser.add_argument("--use_skip", default=False, action='store_true')
     #########################################################
     # Others
     #########################################################
@@ -569,8 +619,8 @@ def parse_args():
                         help="cuda or cpu")
     parser.add_argument('--seed', type=int, default=88, 
                         help="random seed for initialization.")
-    parser.add_argument("--local_rank", type=int, default=0, 
-                        help="For distributed training.")
+    # parser.add_argument("--local_rank", type=int, default=0, 
+    #                     help="For distributed training.")
 
 
     args = parser.parse_args()
@@ -584,12 +634,13 @@ def main(args):
     args.distributed = args.num_gpus > 1
     args.device = torch.device(args.device)
     if args.distributed:
-        print("Init distributed training on local rank {} ({}), rank {}, world size {}".format(args.local_rank, int(os.environ["LOCAL_RANK"]), int(os.environ["NODE_RANK"]), args.num_gpus))
-        torch.cuda.set_device(args.local_rank)
+        local_rank = int(os.environ["LOCAL_RANK"])
+        print("Init distributed training on local rank {} ({}), world size {}".format(local_rank, int(os.environ["LOCAL_RANK"]), args.num_gpus))
+        torch.cuda.set_device(local_rank)
         torch.distributed.init_process_group(
             backend='nccl', init_method='env://'
         )
-        local_rank = int(os.environ["LOCAL_RANK"])
+        args.local_rank = local_rank
         args.device = torch.device("cuda", local_rank)
         synchronize()
 
@@ -603,7 +654,8 @@ def main(args):
     mesh_sampler = Mesh()
 
     # Renderer for visualization
-    renderer = Renderer(faces=smpl.faces.cpu().numpy())
+    # renderer = Renderer(faces=smpl.faces.cpu().numpy())
+    renderer = None
 
     # Load model
     trans_encoder = []
@@ -611,6 +663,54 @@ def main(args):
     input_feat_dim = [int(item) for item in args.input_feat_dim.split(',')]
     hidden_feat_dim = [int(item) for item in args.hidden_feat_dim.split(',')]
     output_feat_dim = input_feat_dim[1:] + [3]
+
+    if args.pct_backbone == 'swin-l':
+        backbone_config=dict(
+            embed_dim=192,
+            depths=[2, 2, 18, 2],
+            num_heads=[6, 12, 24, 48],
+            window_size=[16, 16, 16, 8],
+            pretrain_window_size=[12, 12, 12, 6],
+            ape=False,
+            drop_path_rate=0.5,
+            patch_norm=True,
+            use_checkpoint=True,
+            rpe_interpolation='geo',
+            use_shift=[True, True, False, False],
+            relative_coords_table_type='norm8_log_bylayer',
+            attn_type='cosine_mh',
+            rpe_output_type='sigmoid',
+            postnorm=True,
+            mlp_type='normal',
+            out_indices=(3,),
+            patch_embed_type='normal',
+            patch_merge_type='normal',
+            strid16=False,
+            frozen_stages=5,
+        )
+        backbone = SwinV2TransformerRPE2FC(**backbone_config)
+        pretrained_file = 'models/swin_large.pth'
+        backbone.init_weights(pretrained_file)
+        backbone.train()
+        logger.info('=> loading swin-l model')
+        args.pct_backbone_channel = 1536
+    else:
+        assert False, "The CNN backbone name is not valid"
+
+    pct = PCT(args, backbone, 'classifier', args.pct_backbone_channel, (256, 256), 17, 'models/swin_large.pth', args.pct_pretrained).to(args.device)
+    # frozen pct
+    pct.eval()
+    for name, params in pct.named_parameters():
+        params.requires_grad = False
+
+    ckpt = torch.load(args.pct_pretrained, map_location='cpu')
+    if 'state_dict' in ckpt:
+        key = 'state_dict'
+    else:
+        key = 'model'
+    pct.load_state_dict(ckpt[key])
+
+    logger.info("[PCT]: LOAD pretrained swin-large-pct successfully")
     
     if args.run_eval_only==True and args.resume_checkpoint!=None and args.resume_checkpoint!='None' and 'state_dict' not in args.resume_checkpoint:
         # if only run eval, load checkpoint
@@ -650,7 +750,7 @@ def main(args):
 
             # init a transformer encoder and append it to a list
             assert config.hidden_size % config.num_attention_heads == 0
-            model = model_class(config=config) 
+            model = model_class(config=config).to(args.device)
             logger.info("Init model from scratch.")
             trans_encoder.append(model)
 
@@ -668,6 +768,10 @@ def main(args):
             hrnet_update_config(hrnet_config, hrnet_yaml)
             backbone = get_cls_net(hrnet_config, pretrained=hrnet_checkpoint)
             logger.info('=> loading hrnet-v2-w64 model')
+        elif args.arch == 'resnet50':
+            logger.info("=> using pre-trained model '{}'".format(args.arch))
+            resnet_config.MODEL.PRETRAINED = 'models/pose_resnet_50_256x192.pth.tar'
+            backbone = get_pose_net(resnet_config, is_train=True)
         else:
             print("=> using pre-trained model '{}'".format(args.arch))
             backbone = models.__dict__[args.arch](pretrained=True)
@@ -675,14 +779,14 @@ def main(args):
             backbone = torch.nn.Sequential(*list(backbone.children())[:-2])
 
 
-        trans_encoder = torch.nn.Sequential(*trans_encoder)
-        total_params = sum(p.numel() for p in trans_encoder.parameters())
-        logger.info('Transformers total parameters: {}'.format(total_params))
+        # trans_encoder = torch.nn.Sequential(*trans_encoder) # keep it as a list
+        # total_params = sum(p.numel() for p in trans_encoder.parameters())
+        # logger.info('Transformers total parameters: {}'.format(total_params))
         backbone_total_params = sum(p.numel() for p in backbone.parameters())
         logger.info('Backbone total parameters: {}'.format(backbone_total_params))
 
         # build end-to-end METRO network (CNN backbone + multi-layer transformer encoder)
-        _metro_network = METRO_Network(args, config, backbone, trans_encoder, mesh_sampler)
+        _metro_network = METRO_Network(args, config, backbone, trans_encoder, mesh_sampler, pct)
 
         if args.resume_checkpoint!=None and args.resume_checkpoint!='None':
             # for fine-tuning or resume training or inference, load weights from checkpoint
