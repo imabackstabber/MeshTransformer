@@ -311,23 +311,23 @@ def run(args, train_dataloader, val_dataloader, METRO_model, smpl, mesh_sampler,
             #     temp_fname = args.output_dir + 'visual_' + stamp + '.jpg'
             #     cv2.imwrite(temp_fname, np.asarray(visual_imgs[:,:,::-1]*255))
 
-        # if iteration % iters_per_epoch == 0:
-        #     val_mPVE, val_mPJPE, val_PAmPJPE, val_count = run_validate(args, val_dataloader, 
-        #                                         METRO_model, 
-        #                                         criterion_keypoints, 
-        #                                         criterion_vertices, 
-        #                                         epoch, 
-        #                                         smpl,
-        #                                         mesh_sampler)
+        if iteration % iters_per_epoch == 0:
+            val_mPVE, val_mPJPE, val_PAmPJPE, val_count = run_validate(args, val_dataloader, 
+                                                METRO_model, 
+                                                criterion_keypoints, 
+                                                criterion_vertices, 
+                                                epoch, 
+                                                smpl,
+                                                mesh_sampler)
 
-        #     logger.info(
-        #         ' '.join(['Validation', 'epoch: {ep}',]).format(ep=epoch) 
-        #         + '  mPVE: {:6.2f}, mPJPE: {:6.2f}, PAmPJPE: {:6.2f}, Data Count: {:6.2f}'.format(1000*val_mPVE, 1000*val_mPJPE, 1000*val_PAmPJPE, val_count)
-        #     )
+            logger.info(
+                ' '.join(['Validation', 'epoch: {ep}',]).format(ep=epoch) 
+                + '  mPVE: {:6.2f}, mPJPE: {:6.2f}, PAmPJPE: {:6.2f}, Data Count: {:6.2f}'.format(1000*val_mPVE, 1000*val_mPJPE, 1000*val_PAmPJPE, val_count)
+            )
 
-        #     if val_PAmPJPE<log_eval_metrics.PAmPJPE:
-        #         checkpoint_dir = save_checkpoint(METRO_model, args, epoch, iteration)
-        #         log_eval_metrics.update(val_mPVE, val_mPJPE, val_PAmPJPE, epoch)
+            if val_PAmPJPE<log_eval_metrics.PAmPJPE:
+                checkpoint_dir = save_checkpoint(METRO_model, args, epoch, iteration)
+                log_eval_metrics.update(val_mPVE, val_mPJPE, val_PAmPJPE, epoch)
                 
         
     total_training_time = time.time() - start_training_time
@@ -664,53 +664,53 @@ def main(args):
     hidden_feat_dim = [int(item) for item in args.hidden_feat_dim.split(',')]
     output_feat_dim = input_feat_dim[1:] + [3]
 
-    if args.pct_backbone == 'swin-l':
-        backbone_config=dict(
-            embed_dim=192,
-            depths=[2, 2, 18, 2],
-            num_heads=[6, 12, 24, 48],
-            window_size=[16, 16, 16, 8],
-            pretrain_window_size=[12, 12, 12, 6],
-            ape=False,
-            drop_path_rate=0.5,
-            patch_norm=True,
-            use_checkpoint=True,
-            rpe_interpolation='geo',
-            use_shift=[True, True, False, False],
-            relative_coords_table_type='norm8_log_bylayer',
-            attn_type='cosine_mh',
-            rpe_output_type='sigmoid',
-            postnorm=True,
-            mlp_type='normal',
-            out_indices=(3,),
-            patch_embed_type='normal',
-            patch_merge_type='normal',
-            strid16=False,
-            frozen_stages=5,
-        )
-        backbone = SwinV2TransformerRPE2FC(**backbone_config)
-        pretrained_file = 'models/swin_large.pth'
-        backbone.init_weights(pretrained_file)
-        backbone.train()
-        logger.info('=> loading swin-l model')
-        args.pct_backbone_channel = 1536
-    else:
-        assert False, "The CNN backbone name is not valid"
+    # if args.pct_backbone == 'swin-l':
+    #     backbone_config=dict(
+    #         embed_dim=192,
+    #         depths=[2, 2, 18, 2],
+    #         num_heads=[6, 12, 24, 48],
+    #         window_size=[16, 16, 16, 8],
+    #         pretrain_window_size=[12, 12, 12, 6],
+    #         ape=False,
+    #         drop_path_rate=0.5,
+    #         patch_norm=True,
+    #         use_checkpoint=True,
+    #         rpe_interpolation='geo',
+    #         use_shift=[True, True, False, False],
+    #         relative_coords_table_type='norm8_log_bylayer',
+    #         attn_type='cosine_mh',
+    #         rpe_output_type='sigmoid',
+    #         postnorm=True,
+    #         mlp_type='normal',
+    #         out_indices=(3,),
+    #         patch_embed_type='normal',
+    #         patch_merge_type='normal',
+    #         strid16=False,
+    #         frozen_stages=5,
+    #     )
+    #     backbone = SwinV2TransformerRPE2FC(**backbone_config)
+    #     pretrained_file = 'models/swin_large.pth'
+    #     backbone.init_weights(pretrained_file)
+    #     backbone.train()
+    #     logger.info('=> loading swin-l model')
+    #     args.pct_backbone_channel = 1536
+    # else:
+    #     assert False, "The CNN backbone name is not valid"
 
-    pct = PCT(args, backbone, 'classifier', args.pct_backbone_channel, (256, 256), 17, 'models/swin_large.pth', args.pct_pretrained).to(args.device)
-    # frozen pct
-    pct.eval()
-    for name, params in pct.named_parameters():
-        params.requires_grad = False
+    # pct = PCT(args, backbone, 'classifier', args.pct_backbone_channel, (256, 256), 17, 'models/swin_large.pth', args.pct_pretrained).to(args.device)
+    # # frozen pct
+    # pct.eval()
+    # for name, params in pct.named_parameters():
+    #     params.requires_grad = False
 
-    ckpt = torch.load(args.pct_pretrained, map_location='cpu')
-    if 'state_dict' in ckpt:
-        key = 'state_dict'
-    else:
-        key = 'model'
-    pct.load_state_dict(ckpt[key])
+    # ckpt = torch.load(args.pct_pretrained, map_location='cpu')
+    # if 'state_dict' in ckpt:
+    #     key = 'state_dict'
+    # else:
+    #     key = 'model'
+    # pct.load_state_dict(ckpt[key])
 
-    logger.info("[PCT]: LOAD pretrained swin-large-pct successfully")
+    # logger.info("[PCT]: LOAD pretrained swin-large-pct successfully")
     
     if args.run_eval_only==True and args.resume_checkpoint!=None and args.resume_checkpoint!='None' and 'state_dict' not in args.resume_checkpoint:
         # if only run eval, load checkpoint
@@ -786,7 +786,9 @@ def main(args):
         logger.info('Backbone total parameters: {}'.format(backbone_total_params))
 
         # build end-to-end METRO network (CNN backbone + multi-layer transformer encoder)
-        _metro_network = METRO_Network(args, config, backbone, trans_encoder, mesh_sampler, pct)
+        # _metro_network = METRO_Network(args, config, backbone, trans_encoder, mesh_sampler, pct)
+        _metro_network = METRO_Network(args, config, backbone, trans_encoder, mesh_sampler)
+
 
         if args.resume_checkpoint!=None and args.resume_checkpoint!='None':
             # for fine-tuning or resume training or inference, load weights from checkpoint

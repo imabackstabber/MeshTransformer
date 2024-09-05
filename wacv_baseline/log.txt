@@ -1,0 +1,51 @@
+2024-09-05 13:33:34,163 METRO INFO: Using 4 GPUs
+2024-09-05 13:33:38,756 METRO INFO: Update config parameter num_hidden_layers: 12 -> 4
+2024-09-05 13:33:38,756 METRO INFO: Update config parameter hidden_size: 768 -> 1024
+2024-09-05 13:33:38,756 METRO INFO: Update config parameter num_attention_heads: 12 -> 4
+2024-09-05 13:33:40,128 METRO INFO: Init model from scratch.
+2024-09-05 13:33:40,129 METRO INFO: Update config parameter num_hidden_layers: 12 -> 4
+2024-09-05 13:33:40,129 METRO INFO: Update config parameter hidden_size: 768 -> 256
+2024-09-05 13:33:40,129 METRO INFO: Update config parameter num_attention_heads: 12 -> 4
+2024-09-05 13:33:40,383 METRO INFO: Init model from scratch.
+2024-09-05 13:33:40,383 METRO INFO: Update config parameter num_hidden_layers: 12 -> 4
+2024-09-05 13:33:40,383 METRO INFO: Update config parameter hidden_size: 768 -> 128
+2024-09-05 13:33:40,383 METRO INFO: Update config parameter num_attention_heads: 12 -> 4
+2024-09-05 13:33:40,505 METRO INFO: Init model from scratch.
+2024-09-05 13:33:40,506 METRO INFO: => using pre-trained model 'resnet50'
+2024-09-05 13:33:40,751 METRO INFO: Backbone total parameters: 23508032
+2024-09-05 13:33:40,867 METRO INFO: Training parameters Namespace(data_dir='datasets', train_yaml='Cliff-H36m/train.yaml', val_yaml='3dpw/test_has_gender.yaml', num_workers=1, img_scale_factor=1, model_name_or_path='metro/modeling/bert/bert-base-uncased/', resume_checkpoint=None, output_dir='wacv_baseline', config_name='', per_gpu_train_batch_size=16, per_gpu_eval_batch_size=16, lr=0.0001, num_train_epochs=50, vertices_loss_weight=100.0, joints_loss_weight=1000.0, vloss_w_full=0.33, vloss_w_sub=0.33, vloss_w_sub2=0.33, drop_out=0.1, arch='resnet50', num_hidden_layers=4, hidden_size=128, num_attention_heads=4, intermediate_size=-1, input_feat_dim='2051,512,128', hidden_feat_dim='1024,256,128', legacy_setting=True, pct_backbone='swin-l', pct_backbone_channel=1536, tokenizer_guide_ratio=0.5, cls_head_conv_channels=256, cls_head_hidden_dim=64, cls_head_num_blocks=4, cls_head_hidden_inter_dim=256, cls_head_token_inter_dim=64, cls_head_dropout=0.0, cls_head_conv_num_blocks=2, cls_head_dilation=1, tokenizer_encoder_drop_rate=0.2, tokenizer_encoder_num_blocks=4, tokenizer_encoder_hidden_dim=512, tokenizer_encoder_token_inter_dim=64, tokenizer_encoder_hidden_inter_dim=512, tokenizer_encoder_dropout=0.0, tokenizer_decoder_num_blocks=1, tokenizer_decoder_hidden_dim=32, tokenizer_decoder_token_inter_dim=64, tokenizer_decoder_hidden_inter_dim=64, tokenizer_decoder_dropout=0.0, tokenizer_codebook_token_num=34, tokenizer_codebook_token_dim=512, tokenizer_codebook_token_class_num=2048, tokenizer_codebook_ema_decay=0.9, pct_pretrained='models/pct/pct_swin_large.pth', use_pct=False, use_skip=False, run_eval_only=False, logging_steps=1000, device=device(type='cuda', index=0), seed=88, num_gpus=4, distributed=True, local_rank=0)
+2024-09-05 13:33:47,503 METRO INFO: Local rank: 0 Max iteration: 400650 iters_per_epoch: 8013 num_train_epochs: 50
+2024-09-05 13:33:57,285 METRO INFO: eta: 4 days, 9:10:39 epoch: 0 iter: 10 max mem : 11359  loss: 238.5720, 2d joint loss: 0.2824, 3d joint loss: 0.1842, vertex loss: 0.2616, compute: 0.9451, data: 0.4276, lr: 0.000100
+2024-09-05 13:43:32,750 METRO INFO: eta: 2 days, 16:55:21 epoch: 0 iter: 1000 max mem : 11359  loss: 95.6777, 2d joint loss: 0.1021, 3d joint loss: 0.0657, vertex loss: 0.1978, compute: 0.5848, data: 0.3370, lr: 0.000100
+2024-09-05 13:53:44,628 METRO INFO: eta: 2 days, 18:15:45 epoch: 0 iter: 2000 max mem : 11359  loss: 75.7303, 2d joint loss: 0.0801, 3d joint loss: 0.0504, vertex loss: 0.1728, compute: 0.5984, data: 0.3669, lr: 0.000100
+2024-09-05 14:04:22,802 METRO INFO: eta: 2 days, 19:33:21 epoch: 0 iter: 3000 max mem : 11359  loss: 65.9013, 2d joint loss: 0.0692, 3d joint loss: 0.0432, vertex loss: 0.1575, compute: 0.6116, data: 0.3879, lr: 0.000100
+2024-09-05 14:15:01,590 METRO INFO: eta: 2 days, 20:08:28 epoch: 0 iter: 4000 max mem : 11359  loss: 59.9315, 2d joint loss: 0.0625, 3d joint loss: 0.0390, vertex loss: 0.1471, compute: 0.6185, data: 0.3990, lr: 0.000100
+2024-09-05 14:25:31,779 METRO INFO: eta: 2 days, 20:13:15 epoch: 0 iter: 5000 max mem : 11359  loss: 55.5049, 2d joint loss: 0.0575, 3d joint loss: 0.0358, vertex loss: 0.1392, compute: 0.6207, data: 0.4046, lr: 0.000100
+2024-09-05 14:36:03,242 METRO INFO: eta: 2 days, 20:14:54 epoch: 0 iter: 6000 max mem : 11359  loss: 52.1902, 2d joint loss: 0.0537, 3d joint loss: 0.0335, vertex loss: 0.1332, compute: 0.6226, data: 0.4016, lr: 0.000100
+2024-09-05 14:46:20,701 METRO INFO: eta: 2 days, 19:59:46 epoch: 0 iter: 7000 max mem : 11359  loss: 49.5918, 2d joint loss: 0.0509, 3d joint loss: 0.0317, vertex loss: 0.1285, compute: 0.6218, data: 0.3949, lr: 0.000100
+2024-09-05 14:56:35,114 METRO INFO: eta: 2 days, 19:43:12 epoch: 0 iter: 8000 max mem : 11359  loss: 47.4868, 2d joint loss: 0.0485, 3d joint loss: 0.0302, vertex loss: 0.1245, compute: 0.6209, data: 0.3900, lr: 0.000100
+2024-09-05 15:06:47,582 METRO INFO: eta: 2 days, 19:26:50 epoch: 1 iter: 9000 max mem : 11360  loss: 45.7051, 2d joint loss: 0.0465, 3d joint loss: 0.0289, vertex loss: 0.1211, compute: 0.6200, data: 0.3854, lr: 0.000100
+2024-09-05 15:17:00,037 METRO INFO: eta: 2 days, 19:11:36 epoch: 1 iter: 10000 max mem : 11360  loss: 44.1761, 2d joint loss: 0.0448, 3d joint loss: 0.0279, vertex loss: 0.1182, compute: 0.6192, data: 0.3816, lr: 0.000100
+2024-09-05 15:27:13,725 METRO INFO: eta: 2 days, 18:57:57 epoch: 1 iter: 11000 max mem : 11360  loss: 42.8474, 2d joint loss: 0.0434, 3d joint loss: 0.0269, vertex loss: 0.1157, compute: 0.6187, data: 0.3787, lr: 0.000100
+2024-09-05 15:37:26,891 METRO INFO: eta: 2 days, 18:44:42 epoch: 1 iter: 12000 max mem : 11360  loss: 41.6641, 2d joint loss: 0.0421, 3d joint loss: 0.0261, vertex loss: 0.1134, compute: 0.6182, data: 0.3762, lr: 0.000100
+2024-09-05 15:47:41,133 METRO INFO: eta: 2 days, 18:32:22 epoch: 1 iter: 13000 max mem : 11360  loss: 40.6289, 2d joint loss: 0.0409, 3d joint loss: 0.0254, vertex loss: 0.1114, compute: 0.6179, data: 0.3743, lr: 0.000100
+2024-09-05 15:58:00,016 METRO INFO: eta: 2 days, 18:22:33 epoch: 1 iter: 14000 max mem : 11360  loss: 39.7037, 2d joint loss: 0.0399, 3d joint loss: 0.0248, vertex loss: 0.1095, compute: 0.6180, data: 0.3726, lr: 0.000100
+2024-09-05 16:08:21,229 METRO INFO: eta: 2 days, 18:13:36 epoch: 1 iter: 15000 max mem : 11360  loss: 38.8658, 2d joint loss: 0.0390, 3d joint loss: 0.0242, vertex loss: 0.1079, compute: 0.6182, data: 0.3711, lr: 0.000100
+2024-09-05 16:10:26,322 METRO INFO: Using 4 GPUs
+2024-09-05 16:10:30,403 METRO INFO: Update config parameter num_hidden_layers: 12 -> 4
+2024-09-05 16:10:30,403 METRO INFO: Update config parameter hidden_size: 768 -> 1024
+2024-09-05 16:10:30,403 METRO INFO: Update config parameter num_attention_heads: 12 -> 4
+2024-09-05 16:10:31,542 METRO INFO: Init model from scratch.
+2024-09-05 16:10:31,542 METRO INFO: Update config parameter num_hidden_layers: 12 -> 4
+2024-09-05 16:10:31,542 METRO INFO: Update config parameter hidden_size: 768 -> 256
+2024-09-05 16:10:31,542 METRO INFO: Update config parameter num_attention_heads: 12 -> 4
+2024-09-05 16:10:31,749 METRO INFO: Init model from scratch.
+2024-09-05 16:10:31,750 METRO INFO: Update config parameter num_hidden_layers: 12 -> 4
+2024-09-05 16:10:31,750 METRO INFO: Update config parameter hidden_size: 768 -> 128
+2024-09-05 16:10:31,750 METRO INFO: Update config parameter num_attention_heads: 12 -> 4
+2024-09-05 16:10:31,852 METRO INFO: Init model from scratch.
+2024-09-05 16:10:31,852 METRO INFO: => using pre-trained model 'resnet50'
+2024-09-05 16:10:32,558 METRO INFO: Backbone total parameters: 23508032
+2024-09-05 16:10:32,654 METRO INFO: Training parameters Namespace(data_dir='datasets', train_yaml='Cliff-H36m/train.yaml', val_yaml='3dpw/test_has_gender.yaml', num_workers=1, img_scale_factor=1, model_name_or_path='metro/modeling/bert/bert-base-uncased/', resume_checkpoint=None, output_dir='wacv_baseline', config_name='', per_gpu_train_batch_size=16, per_gpu_eval_batch_size=16, lr=0.0001, num_train_epochs=50, vertices_loss_weight=100.0, joints_loss_weight=1000.0, vloss_w_full=0.33, vloss_w_sub=0.33, vloss_w_sub2=0.33, drop_out=0.1, arch='resnet50', num_hidden_layers=4, hidden_size=128, num_attention_heads=4, intermediate_size=-1, input_feat_dim='2051,512,128', hidden_feat_dim='1024,256,128', legacy_setting=True, pct_backbone='swin-l', pct_backbone_channel=1536, tokenizer_guide_ratio=0.5, cls_head_conv_channels=256, cls_head_hidden_dim=64, cls_head_num_blocks=4, cls_head_hidden_inter_dim=256, cls_head_token_inter_dim=64, cls_head_dropout=0.0, cls_head_conv_num_blocks=2, cls_head_dilation=1, tokenizer_encoder_drop_rate=0.2, tokenizer_encoder_num_blocks=4, tokenizer_encoder_hidden_dim=512, tokenizer_encoder_token_inter_dim=64, tokenizer_encoder_hidden_inter_dim=512, tokenizer_encoder_dropout=0.0, tokenizer_decoder_num_blocks=1, tokenizer_decoder_hidden_dim=32, tokenizer_decoder_token_inter_dim=64, tokenizer_decoder_hidden_inter_dim=64, tokenizer_decoder_dropout=0.0, tokenizer_codebook_token_num=34, tokenizer_codebook_token_dim=512, tokenizer_codebook_token_class_num=2048, tokenizer_codebook_ema_decay=0.9, pct_pretrained='models/pct/pct_swin_large.pth', use_pct=False, use_skip=False, run_eval_only=False, logging_steps=1000, device=device(type='cuda', index=0), seed=88, num_gpus=4, distributed=True, local_rank=0)
+2024-09-05 16:10:38,015 METRO INFO: Local rank: 0 Max iteration: 400650 iters_per_epoch: 8013 num_train_epochs: 50
+2024-09-05 16:10:46,137 METRO INFO: eta: 3 days, 15:30:19 epoch: 0 iter: 10 max mem : 11359  loss: 238.6200, 2d joint loss: 0.2824, 3d joint loss: 0.1842, vertex loss: 0.2616, compute: 0.7863, data: 0.3679, lr: 0.000100
